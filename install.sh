@@ -1,4 +1,5 @@
 #!/bin/bash
+echo "CARROT"   
 set -euo pipefail
 USAGE=$(cat <<-END
     Usage: ./install.sh [OPTION]
@@ -13,7 +14,7 @@ USAGE=$(cat <<-END
     with apt if on linux or brew if on OSX
 END
 )
-
+echo "CELERY"
 zsh=false
 tmux=false
 extras=false
@@ -36,7 +37,7 @@ while (( "$#" )); do
             echo "Error: Unsupported flag $1" >&2 && exit 1 ;;
     esac
 done
-
+echo "NANI"
 operating_system="$(uname -s)"
 case "${operating_system}" in
     Linux*)     machine=Linux;;
@@ -44,7 +45,7 @@ case "${operating_system}" in
     *)          machine="UNKNOWN:${operating_system}"
                 echo "Error: Unsupported operating system ${operating_system}" && exit 1
 esac
-
+echo $machine
 # Installing on linux with apt
 if [ $machine == "Linux" ]; then
     DOT_DIR=$(dirname $(realpath $0))
@@ -68,12 +69,13 @@ if [ $machine == "Linux" ]; then
         sudo apt-get install -y npm
         yes | npm i -g shell-ask
     fi
-
 # Installing on mac with homebrew
 elif [ $machine == "Mac" ]; then
-    yes | brew install coreutils ncdu htop ncdu rsync btop jq  # Mac won't have realpath before coreutils installed
+    echo "TOMATO"
+    # yes | brew install coreutils ncdu htop ncdu rsync btop jq  # Mac won't have realpath before coreutils installed
+    echo "TOMATO2"
     curl -LsSf https://astral.sh/uv/install.sh | sh
-
+    echo "TOMATO"
     if [ $extras == true ]; then
         yes | brew install ripgrep dust jless
 
@@ -82,7 +84,7 @@ elif [ $machine == "Mac" ]; then
         yes | cargo install code2prompt
         yes | brew install peco
     fi
-
+    echo "TOMATO3"
     DOT_DIR=$(dirname $(realpath $0))
     [ $zsh == true ] && yes | brew install zsh
     [ $tmux == true ] && yes | brew install tmux
@@ -90,9 +92,11 @@ elif [ $machine == "Mac" ]; then
     defaults write -g KeyRepeat -int 1 # normal minimum is 2 (30 ms)
     defaults write -g com.apple.mouse.scaling 5.0
     defaults write com.microsoft.VSCode ApplePressAndHoldEnabled -bool false
+    echo "TOMATO4"
 fi
 
 # Setting up oh my zsh and oh my zsh plugins
+echo POTATO
 ZSH=~/.oh-my-zsh
 ZSH_CUSTOM=$ZSH/custom
 if [ -d $ZSH ] && [ "$force" = "false" ]; then
