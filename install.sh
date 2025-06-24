@@ -1,5 +1,4 @@
 #!/bin/bash
-echo "CARROT"   
 set -euo pipefail
 USAGE=$(cat <<-END
     Usage: ./install.sh [OPTION]
@@ -49,14 +48,14 @@ echo $machine
 # Installing on linux with apt
 if [ $machine == "Linux" ]; then
     DOT_DIR=$(dirname $(realpath $0))
-    sudo apt-get update -y
-    [ $zsh == true ] && sudo apt-get install -y zsh
-    [ $tmux == true ] && sudo apt-get install -y tmux
-    sudo apt-get install -y less nano htop ncdu nvtop lsof rsync jq
+    apt-get update -y
+    [ $zsh == true ] &&  apt-get install -y zsh
+    [ $tmux == true ] &&  apt-get install -y tmux
+    apt-get install -y less nano htop ncdu nvtop lsof rsync jq
     curl -LsSf https://astral.sh/uv/install.sh | sh
     
     if [ $extras == true ]; then
-        sudo apt-get install -y ripgrep
+        apt-get install -y ripgrep
 
         yes | curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | /bin/bash
         yes | brew install dust jless
@@ -66,7 +65,7 @@ if [ $machine == "Linux" ]; then
         yes | cargo install code2prompt
         yes | brew install peco
 
-        sudo apt-get install -y npm
+         apt-get install -y npm
         yes | npm i -g shell-ask
     fi
 # Installing on mac with homebrew
