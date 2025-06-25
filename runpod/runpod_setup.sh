@@ -20,4 +20,4 @@ chsh -s /usr/bin/zsh
 cd ..
 
 # 4) Setup github
-echo ./scripts/setup_github.sh "thomasjiralrespong@gmail.com" "Thomas Jiralerspong"
+echo ./scripts/setup_github.sh "thomasjiralerspong@gmail.com" "Thomas Jiralerspong"
