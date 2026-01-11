@@ -1,2 +1,23 @@
+# OS files
 .DS_Store
+Thumbs.db
+
+# Editor files
 *.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Backup files created by setup script
+*.backup.*
+
+# Local overrides (not committed)
+*.local
+.env
+.env.local
+
+# Secrets
+*.key
+*.pem
+credentials*

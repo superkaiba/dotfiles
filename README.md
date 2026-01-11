@@ -1,77 +1,138 @@
-# dotfiles
-ZSH, Tmux, Vim and ssh setup on both local/remote machines.
+# Dotfiles
 
-## Installation
+Personal dotfiles for consistent environment setup across multiple computing clusters.
 
-### Step 1
-Install dependencies (e.g. oh-my-zsh and related plugins), you can specify options to install specific programs: tmux, zsh, note that your dev-vm will already have tmux and zsh installed so you don't need to provide any options in this case, but you may need to provide these if you are installing locally. 
+## Supported Clusters
 
-Installation on a mac machine requires homebrew so install this [from here](https://brew.sh/) first if you haven't already.
+- **Mila** - Quebec AI Institute cluster
+- **Compute Canada** - Narval, Cedar, Graham, etc.
+- **Hyperbolic** - Cloud GPU instances
+- **RunPod** - Serverless GPU pods
+- **Local** - Fallback for local machines
 
-```bash
-# Install dependencies (remove tmux or zsh if you don't need to install them)
-./install.sh --tmux --zsh
-```
-
-### Step 2
-Deploy (e.g. source aliases for .zshrc, apply oh-my-zsh settings etc..)
-```bash
-# Remote linux machine
-./deploy.sh  
-# (optional) Deploy with extra aliases (useful for remote machines where you want specific aliases)
-./deploy.sh --aliases=speechmatics
-# (optional) Include simple vimrc 
-./deploy.sh --vim
-```
-
-### Step 3
-This set of dotfiles uses the powerlevel10k theme for zsh, this makes your terminal look better and adds lots of useful features, e.g. env indicators, git status etc...
-
-Note that as the provided powerlevel10k config uses special icons it is *highly recommended* you install a custom font that supports these icons. A guide to do that is [here](https://github.com/romkatv/powerlevel10k#meslo-nerd-font-patched-for-powerlevel10k). Alternatively you can set up powerlevel10k to not use these icons (but it won't look as good!)
-
-This repo comes with a preconfigured powerlevel10k theme in [`./config/p10k.zsh`](./config/p10k.zsh) but you can reconfigure this by running `p10k configure` which will launch an interactive window. 
-
-
-When you get to the last two options below
-```
-Powerlevel10k config file already exists.
-Overwrite ~/git/dotfiles/config/p10k.zsh?
-# Press y for YES
-
-Apply changes to ~/.zshrc?
-# Press n for NO 
-```
-
-## Getting to know these dotfiles
-
-* Any software or command line tools you need, add them to the [install.sh](./install.sh) script. Try adding a new command line tool to the install script.
-* Any new plugins or environment setup, add them to the [config/zshrc.sh](./config/zshrc.sh) script.
-* Any aliases you need, add them to the [config/aliases.sh](./config/aliases.sh) script. Try adding your own alias to the bottom of the file. For example, try setting `cd1` to your most used git repo so you can just type `cd1` to get to it.
-* Any setup you do in a new RunPod, add it to [runpod/runpod_setup.sh](./runpod/runpod_setup.sh).
-
-## Docker image for runpod
-
-To build the docker image for runpod, you can run the following command:
+## Quick Start
 
 ```bash
-export DOCKER_DEFAULT_PLATFORM=linux/amd64
-docker build -f runpod/johnh_dev.Dockerfile -t jplhughes1/runpod-dev .
-
-# Build with buildx
-docker buildx create --name mybuilder --use
-docker buildx build --platform linux/amd64 -f runpod/johnh_dev.Dockerfile -t jplhughes1/runpod-dev . --push
-
+git clone https://github.com/USERNAME/dotfiles.git ~/.dotfiles
+cd ~/.dotfiles
+./setup.sh
 ```
 
-To test it
+The setup script will:
+1. Auto-detect which cluster you're on
+2. Install oh-my-zsh and Powerlevel10k theme
+3. Install Claude Code CLI
+4. Backup existing configs and create symlinks
+5. Apply cluster-specific settings
+
+## What's Included
+
+### Shell (Zsh)
+- oh-my-zsh with useful plugins
+- Powerlevel10k theme (install [Meslo Nerd Font](https://github.com/romkatv/powerlevel10k#meslo-nerd-font-patched-for-powerlevel10k) for best experience)
+- Common aliases for git, navigation, tmux, python
+- Cluster-specific SLURM aliases
+
+### Editor (Vim)
+- Sensible defaults
+- Line numbers, syntax highlighting
+- Useful key mappings (space as leader)
+
+### Terminal Multiplexer (Tmux)
+- `Ctrl+a` prefix (instead of Ctrl+b)
+- Vim-style pane navigation
+- Mouse support
+- Clean status bar
+
+### Git
+- Useful aliases
+- Better diff colors
+- Default branch: main
+
+### AI Assistant
+- Claude Code CLI for AI-assisted coding
+
+## Structure
+
+```
+dotfiles/
+├── setup.sh              # Main setup script (auto-detects cluster)
+├── scripts/
+│   ├── detect_cluster.sh # Cluster auto-detection logic
+│   └── utils.sh          # Helper functions
+├── config/
+│   ├── zsh/              # Zsh configuration
+│   ├── vim/              # Vim configuration
+│   ├── tmux/             # Tmux configuration
+│   └── git/              # Git configuration
+└── clusters/
+    ├── mila/             # Mila-specific configs
+    ├── computecanada/    # Compute Canada configs
+    ├── hyperbolic/       # Hyperbolic configs
+    └── runpod/           # RunPod configs
+```
+
+## Cluster-Specific Features
+
+### Mila
+- Module load shortcuts (`ml`, `mla`, `mll`)
+- SLURM aliases: `sq`, `gpu`, `gpu2`, `slog`, `stail`
+- Scratch and project paths: `$SCRATCH`, `$PROJECTS`
+- HuggingFace/W&B cache on scratch
+
+### Compute Canada
+- Virtualenv helpers following CC best practices (`mkvenv`)
+- SLURM aliases with A100 support (`gpua100`)
+- Job efficiency checking (`eff`)
+- Disk quota monitoring (`quota`)
+
+### Hyperbolic / RunPod
+- Persistent storage setup on volumes
+- Quick conda environment creation (`setup_env`)
+- Model download helpers (`download_hf`)
+- GPU monitoring aliases
+
+## Key Aliases
+
+| Alias | Command | Description |
+|-------|---------|-------------|
+| `gs` | `git status` | Git status |
+| `gd` | `git diff` | Git diff |
+| `ll` | `ls -la` | List all files |
+| `ta` | `tmux attach -t` | Attach to tmux session |
+| `sq` | `squeue -u $USER` | Show your SLURM jobs |
+| `gpu` | `salloc --gres=gpu:1...` | Request interactive GPU |
+| `gpustat` | `nvidia-smi` | Show GPU status |
+| `scratch` | `cd $SCRATCH` | Go to scratch directory |
+
+## Customization
+
+### Adding Personal Settings
+The zshrc will source `~/.zshrc.local` if it exists - use this for machine-specific settings.
+
+### Modifying Cluster Detection
+Edit `scripts/detect_cluster.sh` to add or modify cluster detection markers.
+
+### Adding New Clusters
+1. Create a new directory under `clusters/`
+2. Add `env.sh` for environment variables
+3. Add `aliases.sh` for cluster-specific aliases
+4. Update `scripts/detect_cluster.sh` with detection logic
+
+## Updating
 
 ```bash
-docker run -it -v $PWD/runpod/entrypoint.sh:/dotfiles/runpod/entrypoint.sh -e USE_ZSH=true jplhughes1/runpod-dev /bin/zsh
+cd ~/.dotfiles
+git pull
+./setup.sh  # Re-run to apply changes
 ```
 
-To push it to docker hub
+## Legacy Scripts
 
-```bash
-docker push jplhughes1/runpod-dev
-```
+The original `install.sh` and `deploy.sh` scripts are preserved for compatibility:
+- `install.sh --tmux --zsh` - Install specific dependencies
+- `deploy.sh --vim --aliases=custom` - Deploy with options
 
+## License
+
+MIT

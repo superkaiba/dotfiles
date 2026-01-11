@@ -1,0 +1,100 @@
+" Sensible Vim Configuration
+
+" General settings
+set nocompatible              " Use Vim settings, not Vi
+set encoding=utf-8            " UTF-8 encoding
+set fileencoding=utf-8
+
+" UI Configuration
+set number                    " Show line numbers
+set relativenumber           " Relative line numbers
+set ruler                    " Show cursor position
+set showcmd                  " Show command in status line
+set showmode                 " Show current mode
+set cursorline               " Highlight current line
+set laststatus=2             " Always show status line
+set wildmenu                 " Visual autocomplete for command menu
+set wildmode=list:longest    " Complete files like shell
+
+" Search
+set hlsearch                 " Highlight search results
+set incsearch                " Incremental search
+set ignorecase               " Case-insensitive search
+set smartcase                " Unless uppercase is used
+
+" Indentation
+set autoindent               " Auto-indent new lines
+set smartindent              " Smart indent
+set tabstop=4                " Tab = 4 spaces
+set shiftwidth=4             " Indent = 4 spaces
+set softtabstop=4            " Tab key = 4 spaces
+set expandtab                " Use spaces instead of tabs
+
+" Editor behavior
+set backspace=indent,eol,start  " Backspace over everything
+set scrolloff=5              " Keep 5 lines above/below cursor
+set sidescrolloff=5          " Keep 5 columns left/right of cursor
+set wrap                     " Wrap long lines
+set linebreak                " Wrap at word boundaries
+set mouse=a                  " Enable mouse support
+set clipboard=unnamed        " Use system clipboard
+
+" File handling
+set autoread                 " Reload files changed outside Vim
+set hidden                   " Allow hidden buffers
+set nobackup                 " No backup files
+set nowritebackup
+set noswapfile               " No swap files
+
+" Performance
+set lazyredraw               " Don't redraw during macros
+set ttyfast                  " Faster terminal connection
+
+" Syntax and colors
+syntax enable                " Enable syntax highlighting
+set background=dark          " Dark background
+
+" Try to use a colorscheme if available
+silent! colorscheme desert
+
+" Key mappings
+let mapleader = " "          " Space as leader key
+
+" Quick save
+nnoremap <leader>w :w<CR>
+nnoremap <leader>q :q<CR>
+
+" Clear search highlight
+nnoremap <leader>h :nohlsearch<CR>
+
+" Better window navigation
+nnoremap <C-h> <C-w>h
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+nnoremap <C-l> <C-w>l
+
+" Move lines up/down
+nnoremap <A-j> :m .+1<CR>==
+nnoremap <A-k> :m .-2<CR>==
+vnoremap <A-j> :m '>+1<CR>gv=gv
+vnoremap <A-k> :m '<-2<CR>gv=gv
+
+" Quick buffer navigation
+nnoremap <leader>bn :bnext<CR>
+nnoremap <leader>bp :bprevious<CR>
+nnoremap <leader>bd :bdelete<CR>
+
+" Disable arrow keys (learn hjkl!)
+" nnoremap <Up> <Nop>
+" nnoremap <Down> <Nop>
+" nnoremap <Left> <Nop>
+" nnoremap <Right> <Nop>
+
+" Auto commands
+augroup vimrc
+    autocmd!
+    " Remove trailing whitespace on save
+    autocmd BufWritePre * :%s/\s\+$//e
+    " Return to last edit position
+    autocmd BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
+augroup END
