@@ -32,7 +32,7 @@ link_config() {
     local dst="$2"
 
     if [[ ! -f "$src" ]]; then
-        print_error "Source file not found: $src"
+        print_warning "Source file not found: $src (skipping)"
         return 1
     fi
 
@@ -71,6 +71,32 @@ install_oh_my_zsh() {
     print_success "oh-my-zsh installed"
 }
 
+# Install zsh-autosuggestions plugin
+install_zsh_autosuggestions() {
+    local plugin_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions"
+    if [[ -d "$plugin_dir" ]]; then
+        print_info "zsh-autosuggestions already installed"
+        return 0
+    fi
+
+    print_info "Installing zsh-autosuggestions..."
+    git clone https://github.com/zsh-users/zsh-autosuggestions "$plugin_dir"
+    print_success "zsh-autosuggestions installed"
+}
+
+# Install zsh-syntax-highlighting plugin
+install_zsh_syntax_highlighting() {
+    local plugin_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting"
+    if [[ -d "$plugin_dir" ]]; then
+        print_info "zsh-syntax-highlighting already installed"
+        return 0
+    fi
+
+    print_info "Installing zsh-syntax-highlighting..."
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting "$plugin_dir"
+    print_success "zsh-syntax-highlighting installed"
+}
+
 # Install Powerlevel10k theme
 install_p10k() {
     local p10k_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
@@ -94,4 +120,10 @@ install_claude_code() {
     print_info "Installing Claude Code CLI..."
     curl -fsSL https://claude.ai/install.sh | sh
     print_success "Claude Code CLI installed"
+}
+
+# Install all zsh plugins
+install_zsh_plugins() {
+    install_zsh_autosuggestions
+    install_zsh_syntax_highlighting
 }

@@ -19,6 +19,7 @@ echo ""
 echo "========================================="
 echo "  Dotfiles Setup"
 echo "  Cluster: $CLUSTER"
+echo "  Location: $DOTFILES_DIR"
 echo "========================================="
 echo ""
 
@@ -27,6 +28,9 @@ print_info "Installing dependencies..."
 
 # Install oh-my-zsh
 install_oh_my_zsh
+
+# Install zsh plugins
+install_zsh_plugins
 
 # Install Powerlevel10k
 install_p10k
@@ -48,8 +52,12 @@ link_config "$DOTFILES_DIR/config/vim/vimrc" "$HOME/.vimrc"
 # Tmux configuration
 link_config "$DOTFILES_DIR/config/tmux/tmux.conf" "$HOME/.tmux.conf"
 
-# Git configuration
-link_config "$DOTFILES_DIR/config/git/gitconfig" "$HOME/.gitconfig"
+# Git configuration (skip if user has their own)
+if [[ ! -f "$HOME/.gitconfig" ]] || [[ -L "$HOME/.gitconfig" ]]; then
+    link_config "$DOTFILES_DIR/config/git/gitconfig" "$HOME/.gitconfig"
+else
+    print_warning "Keeping existing ~/.gitconfig (not a symlink)"
+fi
 
 echo ""
 
@@ -69,5 +77,5 @@ echo "  Setup Complete!"
 echo "========================================="
 echo ""
 print_success "Dotfiles configured for: $CLUSTER"
-print_info "Restart your shell or run: source ~/.zshrc"
+print_info "Start a new zsh shell: exec zsh"
 echo ""
