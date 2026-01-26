@@ -68,6 +68,15 @@ detect_os() {
     esac
 }
 
+# Run command with sudo if available, otherwise without
+maybe_sudo() {
+    if command_exists sudo; then
+        sudo "$@"
+    else
+        "$@"
+    fi
+}
+
 # Install a package using the appropriate package manager
 install_package() {
     local pkg="$1"
@@ -75,13 +84,13 @@ install_package() {
 
     if [[ "$os" == "linux" ]]; then
         if command_exists apt-get; then
-            sudo apt-get update && sudo apt-get install -y "$pkg"
+            maybe_sudo apt-get update && maybe_sudo apt-get install -y "$pkg"
         elif command_exists yum; then
-            sudo yum install -y "$pkg"
+            maybe_sudo yum install -y "$pkg"
         elif command_exists dnf; then
-            sudo dnf install -y "$pkg"
+            maybe_sudo dnf install -y "$pkg"
         elif command_exists pacman; then
-            sudo pacman -S --noconfirm "$pkg"
+            maybe_sudo pacman -S --noconfirm "$pkg"
         else
             print_error "Could not detect package manager. Please install $pkg manually."
             return 1
@@ -135,7 +144,7 @@ set_zsh_default() {
 
     # Ensure zsh is in /etc/shells
     if ! grep -q "$zsh_path" /etc/shells 2>/dev/null; then
-        echo "$zsh_path" | sudo tee -a /etc/shells > /dev/null
+        echo "$zsh_path" | maybe_sudo tee -a /etc/shells > /dev/null
     fi
 
     # Change shell
