@@ -29,6 +29,9 @@ print_info "Installing dependencies..."
 # Install zsh first (required for oh-my-zsh)
 install_zsh
 
+# Install vim
+install_vim
+
 # Install oh-my-zsh
 install_oh_my_zsh
 
@@ -80,5 +83,9 @@ echo "  Setup Complete!"
 echo "========================================="
 echo ""
 print_success "Dotfiles configured for: $CLUSTER"
+
+# Set zsh as default shell
+set_zsh_default
+
 print_info "Start a new zsh shell: exec zsh"
 echo ""

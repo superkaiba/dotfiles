@@ -68,6 +68,37 @@ detect_os() {
     esac
 }
 
+# Install a package using the appropriate package manager
+install_package() {
+    local pkg="$1"
+    local os=$(detect_os)
+
+    if [[ "$os" == "linux" ]]; then
+        if command_exists apt-get; then
+            sudo apt-get update && sudo apt-get install -y "$pkg"
+        elif command_exists yum; then
+            sudo yum install -y "$pkg"
+        elif command_exists dnf; then
+            sudo dnf install -y "$pkg"
+        elif command_exists pacman; then
+            sudo pacman -S --noconfirm "$pkg"
+        else
+            print_error "Could not detect package manager. Please install $pkg manually."
+            return 1
+        fi
+    elif [[ "$os" == "mac" ]]; then
+        if command_exists brew; then
+            brew install "$pkg"
+        else
+            print_error "Homebrew not found. Please install $pkg manually."
+            return 1
+        fi
+    else
+        print_error "Unsupported OS. Please install $pkg manually."
+        return 1
+    fi
+}
+
 # Install zsh if not present
 install_zsh() {
     if command_exists zsh; then
@@ -76,34 +107,43 @@ install_zsh() {
     fi
 
     print_info "Installing zsh..."
-    local os=$(detect_os)
+    install_package zsh && print_success "zsh installed"
+}
 
-    if [[ "$os" == "linux" ]]; then
-        if command_exists apt-get; then
-            sudo apt-get update && sudo apt-get install -y zsh
-        elif command_exists yum; then
-            sudo yum install -y zsh
-        elif command_exists dnf; then
-            sudo dnf install -y zsh
-        elif command_exists pacman; then
-            sudo pacman -S --noconfirm zsh
-        else
-            print_error "Could not detect package manager. Please install zsh manually."
-            return 1
-        fi
-    elif [[ "$os" == "mac" ]]; then
-        if command_exists brew; then
-            brew install zsh
-        else
-            print_error "Homebrew not found. Please install zsh manually: brew install zsh"
-            return 1
-        fi
-    else
-        print_error "Unsupported OS. Please install zsh manually."
-        return 1
+# Install vim if not present
+install_vim() {
+    if command_exists vim; then
+        print_info "vim already installed"
+        return 0
     fi
 
-    print_success "zsh installed"
+    print_info "Installing vim..."
+    install_package vim && print_success "vim installed"
+}
+
+# Set zsh as default shell
+set_zsh_default() {
+    local zsh_path=$(which zsh)
+    local current_shell=$(getent passwd "$USER" 2>/dev/null | cut -d: -f7 || echo "$SHELL")
+
+    if [[ "$current_shell" == "$zsh_path" ]]; then
+        print_info "zsh is already the default shell"
+        return 0
+    fi
+
+    print_info "Setting zsh as default shell..."
+
+    # Ensure zsh is in /etc/shells
+    if ! grep -q "$zsh_path" /etc/shells 2>/dev/null; then
+        echo "$zsh_path" | sudo tee -a /etc/shells > /dev/null
+    fi
+
+    # Change shell
+    if chsh -s "$zsh_path"; then
+        print_success "zsh set as default shell (restart terminal to apply)"
+    else
+        print_warning "Could not change shell automatically. Run: chsh -s $zsh_path"
+    fi
 }
 
 # Install oh-my-zsh if not present
