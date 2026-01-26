@@ -55,7 +55,6 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-$ZSH/custom}"
 
 # Load Powerlevel10k config if it exists
 [[ -f "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
-[[ -f "$DOTFILES_DIR/config/zsh/p10k.zsh" ]] && source "$DOTFILES_DIR/config/zsh/p10k.zsh"
 
 # Load common aliases
 [[ -f "$DOTFILES_DIR/config/zsh/aliases.sh" ]] && source "$DOTFILES_DIR/config/zsh/aliases.sh"

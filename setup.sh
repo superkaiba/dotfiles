@@ -55,6 +55,9 @@ link_config "$DOTFILES_DIR/config/vim/vimrc" "$HOME/.vimrc"
 # Tmux configuration
 link_config "$DOTFILES_DIR/config/tmux/tmux.conf" "$HOME/.tmux.conf"
 
+# Powerlevel10k configuration
+link_config "$DOTFILES_DIR/config/zsh/p10k.zsh" "$HOME/.p10k.zsh"
+
 # Git configuration (skip if user has their own)
 if [[ ! -f "$HOME/.gitconfig" ]] || [[ -L "$HOME/.gitconfig" ]]; then
     link_config "$DOTFILES_DIR/config/git/gitconfig" "$HOME/.gitconfig"
