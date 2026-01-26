@@ -26,6 +26,9 @@ echo ""
 # Phase 1: Install dependencies
 print_info "Installing dependencies..."
 
+# Install zsh first (required for oh-my-zsh)
+install_zsh
+
 # Install oh-my-zsh
 install_oh_my_zsh
 

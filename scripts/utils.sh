@@ -59,6 +59,53 @@ command_exists() {
     command -v "$1" &> /dev/null
 }
 
+# Detect OS
+detect_os() {
+    case "$(uname -s)" in
+        Linux*)  echo "linux" ;;
+        Darwin*) echo "mac" ;;
+        *)       echo "unknown" ;;
+    esac
+}
+
+# Install zsh if not present
+install_zsh() {
+    if command_exists zsh; then
+        print_info "zsh already installed"
+        return 0
+    fi
+
+    print_info "Installing zsh..."
+    local os=$(detect_os)
+
+    if [[ "$os" == "linux" ]]; then
+        if command_exists apt-get; then
+            sudo apt-get update && sudo apt-get install -y zsh
+        elif command_exists yum; then
+            sudo yum install -y zsh
+        elif command_exists dnf; then
+            sudo dnf install -y zsh
+        elif command_exists pacman; then
+            sudo pacman -S --noconfirm zsh
+        else
+            print_error "Could not detect package manager. Please install zsh manually."
+            return 1
+        fi
+    elif [[ "$os" == "mac" ]]; then
+        if command_exists brew; then
+            brew install zsh
+        else
+            print_error "Homebrew not found. Please install zsh manually: brew install zsh"
+            return 1
+        fi
+    else
+        print_error "Unsupported OS. Please install zsh manually."
+        return 1
+    fi
+
+    print_success "zsh installed"
+}
+
 # Install oh-my-zsh if not present
 install_oh_my_zsh() {
     if [[ -d "$HOME/.oh-my-zsh" ]]; then
@@ -118,7 +165,7 @@ install_claude_code() {
     fi
 
     print_info "Installing Claude Code CLI..."
-    curl -fsSL https://claude.ai/install.sh | sh
+    curl -fsSL https://claude.ai/install.sh | bash
     print_success "Claude Code CLI installed"
 }
 
