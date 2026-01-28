@@ -68,6 +68,23 @@ else
     print_warning "Keeping existing ~/.gitconfig (not a symlink)"
 fi
 
+# Claude Code configuration
+mkdir -p "$HOME/.claude"
+if [[ ! -f "$HOME/.claude/settings.json" ]] || [[ -L "$HOME/.claude/settings.json" ]]; then
+    link_config "$DOTFILES_DIR/config/claude/settings.json" "$HOME/.claude/settings.json"
+else
+    print_warning "Existing ~/.claude/settings.json found (not a symlink)"
+    read -p "Replace with dotfiles version? [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        mv "$HOME/.claude/settings.json" "$HOME/.claude/settings.json.backup"
+        print_info "Backed up to ~/.claude/settings.json.backup"
+        link_config "$DOTFILES_DIR/config/claude/settings.json" "$HOME/.claude/settings.json"
+    else
+        print_info "Keeping existing settings.json"
+    fi
+fi
+
 echo ""
 
 # Phase 3: Apply cluster-specific configuration

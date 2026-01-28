@@ -33,10 +33,17 @@ The system uses automatic cluster detection to apply environment-specific config
 
 ## Directory Structure
 
-- `config/` - Shell configuration (zsh, vim, tmux, git)
+- `config/` - Shell configuration (zsh, vim, tmux, git, claude)
 - `clusters/` - Per-cluster environment variables and aliases
 - `scripts/` - Setup utilities (`detect_cluster.sh`, `utils.sh`)
 - `runpod/` - RunPod-specific setup scripts
+
+## Claude Code Configuration
+
+The `config/claude/settings.json` file contains Claude Code preferences (model, plugins). On setup, it symlinks to `~/.claude/settings.json`.
+
+**Included:** Model preference, enabled plugins
+**Not included:** History, cache, project data (machine-specific)
 
 ## Adding a New Cluster
 
@@ -48,4 +55,5 @@ The system uses automatic cluster detection to apply environment-specific config
 
 - `config/zsh/zshrc.sh` - Main zsh config that orchestrates loading
 - `config/aliases.sh` - Common aliases (git, tmux, SLURM, navigation)
+- `config/claude/settings.json` - Claude Code model and plugin preferences
 - `scripts/utils.sh` - Helper functions for `link_config`, `install_oh_my_zsh`, etc.
