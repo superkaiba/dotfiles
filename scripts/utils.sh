@@ -25,19 +25,20 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Backup and link a config file
+# Backup and link a config file or directory
 # Usage: link_config <source> <destination>
 link_config() {
     local src="$1"
     local dst="$2"
 
-    if [[ ! -f "$src" ]]; then
-        print_warning "Source file not found: $src (skipping)"
+    # Check if source exists (file or directory)
+    if [[ ! -e "$src" ]]; then
+        print_warning "Source not found: $src (skipping)"
         return 1
     fi
 
-    # Backup existing file if it exists and is not a symlink
-    if [[ -f "$dst" ]] && [[ ! -L "$dst" ]]; then
+    # Backup existing file/directory if it exists and is not a symlink
+    if [[ -e "$dst" ]] && [[ ! -L "$dst" ]]; then
         local backup="${dst}.backup.$(date +%Y%m%d_%H%M%S)"
         print_warning "Backing up existing $dst to $backup"
         mv "$dst" "$backup"
@@ -49,8 +50,8 @@ link_config() {
     # Create parent directory if needed
     mkdir -p "$(dirname "$dst")"
 
-    # Create symlink
-    ln -sf "$src" "$dst"
+    # Create symlink (-n prevents following existing symlink, -f forces)
+    ln -sfn "$src" "$dst"
     print_success "Linked $dst -> $src"
 }
 
