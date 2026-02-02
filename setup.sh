@@ -11,6 +11,17 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DOTFILES_DIR/scripts/utils.sh"
 source "$DOTFILES_DIR/scripts/detect_cluster.sh"
 
+# Configure DNS (useful for containers/cloud environments)
+if [[ $(id -u) -eq 0 ]]; then
+    # Running as root
+    echo "nameserver 8.8.8.8" | tee /etc/resolv.conf > /dev/null
+elif command -v sudo &> /dev/null; then
+    # sudo available
+    echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+else
+    echo "Warning: Cannot configure DNS (not root and sudo not available)"
+fi
+
 # Detect which cluster we're on
 CLUSTER=$(detect_cluster)
 print_info "Detected cluster: $CLUSTER"
@@ -85,6 +96,16 @@ else
     fi
 fi
 
+# Claude Code skills
+if [[ -d "$DOTFILES_DIR/config/claude/skills" ]]; then
+    if [[ ! -d "$HOME/.claude/skills" ]] || [[ -L "$HOME/.claude/skills" ]]; then
+        link_config "$DOTFILES_DIR/config/claude/skills" "$HOME/.claude/skills"
+    else
+        print_warning "Existing ~/.claude/skills directory found (not a symlink)"
+        print_info "Merge manually or remove existing directory to use dotfiles skills"
+    fi
+fi
+
 echo ""
 
 # Phase 3: Apply cluster-specific configuration
@@ -107,5 +128,5 @@ print_success "Dotfiles configured for: $CLUSTER"
 # Set zsh as default shell
 set_zsh_default
 
-print_info "Start a new zsh shell: exec zsh"
-echo ""
+print_info "Starting zsh shell..."
+exec zsh
