@@ -223,6 +223,14 @@ Mock the database layer, use pytest"
 - Document versions explicitly
 - Keep ecosystem churn low
 
+### Package Management
+
+**Always use `uv` for Python projects** (not pip, not conda)
+- `uv venv` to create virtual environments
+- `uv pip install` to install packages
+- `uv run` to run scripts
+- `uv sync` to sync from lockfile
+
 ---
 
 ## Project Overview
