@@ -194,3 +194,70 @@ alias qclear='scancel -u $(whoami)'
 qrun() {
   sbatch --gres=gpu:"$1" "$2"
 }
+
+#-------------------------------------------------------------
+# claude code
+#-------------------------------------------------------------
+
+# Run claude with --dangerously-skip-permissions via a non-root user.
+# Claude Code refuses this flag as root, so we create a dedicated
+# unprivileged user and run through it.
+cclaude() {
+  local user="claudeuser"
+
+  # Create non-root user on first use
+  if ! id "$user" &>/dev/null; then
+    useradd -m -s /bin/bash "$user"
+    echo "Created non-root user: $user"
+  fi
+
+  # Resolve the real claude binary path
+  local claude_real
+  claude_real=$(readlink -f "$(command -v claude 2>/dev/null)")
+  if [[ -z "$claude_real" || ! -f "$claude_real" ]]; then
+    echo "Error: claude binary not found" >&2
+    return 1
+  fi
+
+  # Symlink to /usr/local/bin so the non-root user can find it
+  ln -sf "$claude_real" /usr/local/bin/claude
+
+  # Make both binary path and working directory traversable
+  local cwd dir
+  cwd=$(pwd)
+  for start_dir in "$(dirname "$claude_real")" "$cwd"; do
+    dir="$start_dir"
+    while [[ "$dir" != "/" ]]; do
+      chmod o+x "$dir" 2>/dev/null
+      dir=$(dirname "$dir")
+    done
+  done
+
+  # Grant read/write access to working directory contents
+  if command -v setfacl &>/dev/null; then
+    setfacl -R -m "u:${user}:rwX" -m "d:u:${user}:rwX" "$cwd" 2>/dev/null
+  else
+    chmod -R o+rwX "$cwd"
+  fi
+
+  # Copy claude settings to non-root user (first time only)
+  local user_home="/home/$user"
+  if [[ ! -f "$user_home/.claude/settings.json" ]] && [[ -f /root/.claude/settings.json ]]; then
+    mkdir -p "$user_home/.claude"
+    cp /root/.claude/settings.json "$user_home/.claude/"
+    [[ -d /root/.claude/skills ]] && cp -r /root/.claude/skills "$user_home/.claude/"
+    chown -R "$user:$user" "$user_home/.claude"
+  fi
+
+  # Build escaped argument string
+  local escaped_args=""
+  if [[ $# -gt 0 ]]; then
+    escaped_args=$(printf ' %q' "$@")
+  fi
+
+  # Run claude as non-root user, passing through API key
+  su - "$user" -s /bin/bash -c "
+    export ANTHROPIC_API_KEY=$(printf '%q' "${ANTHROPIC_API_KEY:-}")
+    cd $(printf '%q' "$cwd") && /usr/local/bin/claude --dangerously-skip-permissions${escaped_args}
+  "
+}
