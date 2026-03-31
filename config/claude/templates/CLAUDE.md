@@ -103,6 +103,13 @@ See the `experiment-runner` skill for the full question checklist.
 
 ### Design Principles
 
+**Use Existing Code First**
+- Before writing new code, search the web for existing libraries, frameworks, and repos that solve the problem
+- Propose candidate options with pros/cons (maintenance status, popularity, fit) and let the user choose
+- Prefer well-maintained open-source solutions over rolling your own
+- Only build from scratch when existing solutions don't fit or add unnecessary complexity
+- Check if the current codebase already has utilities or patterns that can be reused
+
 **KISS (Keep It Simple, Stupid)**
 - Choose the simplest solution that works
 - Avoid over-engineering with fancy patterns
