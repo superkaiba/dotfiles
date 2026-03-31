@@ -58,6 +58,7 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-$ZSH/custom}"
 
 # Load common aliases
 [[ -f "$DOTFILES_DIR/config/zsh/aliases.sh" ]] && source "$DOTFILES_DIR/config/zsh/aliases.sh"
+[[ -f "$DOTFILES_DIR/config/aliases.sh" ]] && source "$DOTFILES_DIR/config/aliases.sh"
 
 # Load cluster-specific environment
 [[ -f "$DOTFILES_DIR/clusters/$DOTFILES_CLUSTER/env.sh" ]] && source "$DOTFILES_DIR/clusters/$DOTFILES_CLUSTER/env.sh"
