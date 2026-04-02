@@ -103,12 +103,13 @@ See the `experiment-runner` skill for the full question checklist.
 
 ### Design Principles
 
-**Use Existing Code First**
-- Before writing new code, search the web for existing libraries, frameworks, and repos that solve the problem
-- Propose candidate options with pros/cons (maintenance status, popularity, fit) and let the user choose
-- Prefer well-maintained open-source solutions over rolling your own
-- Only build from scratch when existing solutions don't fit or add unnecessary complexity
+**Reuse Aggressively**
+- Before writing new code, check if a library already does it (`uv add` it)
 - Check if the current codebase already has utilities or patterns that can be reused
+- Check if you already wrote this in another project — if so, extract to a shared package
+- Propose candidate options with pros/cons and let the user choose
+- Only build from scratch when existing solutions don't fit or add unnecessary complexity
+- But don't create your own abstractions prematurely — wait for 3+ occurrences
 
 **KISS (Keep It Simple, Stupid)**
 - Choose the simplest solution that works
@@ -135,19 +136,38 @@ See the `experiment-runner` skill for the full question checklist.
 
 **Clean Code**
 - Readable and self-documenting
-- Meaningful names that reveal intent
-- Small functions that do one thing
-- Comments explain "why", not "what"
+- Meaningful names that reveal intent — no magic numbers, use named constants
+- Small, single-purpose functions and modules — one file = one concern
+- Comments explain "why", not "what" (document interfaces and reasons, not implementations)
 
 **Small PRs**
 - Keep pull requests under 200-400 lines
 - Easier to review, fewer bugs slip through
 - One logical change per PR
 
+**Never Silently Fail**
+- Raise errors loudly and immediately — never swallow exceptions or return default values on failure
+- If something goes wrong, the caller must know about it
+- Prefer crashing over silently producing wrong results
+
 **Testing**
 - Write tests before or alongside code
 - Test behavior, not implementation
 - Aim for fast, reliable tests
+
+**Linting and Formatting: Ruff**
+- One tool for linting and formatting — replaces flake8 + isort + black
+- Run `uv run ruff check .` and `uv run ruff format .` before every commit
+- Configure in `pyproject.toml`:
+
+```toml
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+```
 
 ### Security
 
@@ -156,6 +176,280 @@ See the `experiment-runner` skill for the full question checklist.
 - Use parameterized queries (prevent SQL injection)
 - Escape output (prevent XSS)
 - Principle of least privilege
+
+---
+
+## Foundational Tooling
+
+### Package Management: `uv`
+
+**Always use `uv` for every project. No exceptions.** (not pip, not conda)
+
+```bash
+uv init my-project         # initialize project with pyproject.toml
+uv python pin 3.11         # pin Python version
+uv add torch wandb hydra-core  # add dependencies
+uv add --dev pytest ruff   # add dev dependencies
+uv run python train.py     # run inside managed environment
+uv sync                    # collaborators run this to reproduce
+```
+
+Every project gets a `pyproject.toml` (single source of truth) and a `uv.lock` (reproducibility guarantee). Commit both. For GPU/CUDA packages, conda/mamba for the base environment + `uv` for the Python layer compose cleanly.
+
+### Configuration: Hydra + OmegaConf
+
+**Always use Hydra for experiment configuration. Never use argparse for research code.**
+
+Compose hierarchical YAML configs, override from CLI, auto-save resolved config per run.
+
+```
+configs/
+├── config.yaml          # defaults list
+├── model/
+│   ├── gpt2.yaml
+│   └── llama3.yaml
+├── dataset/
+│   ├── openwebtext.yaml
+│   └── ultrachat.yaml
+├── training/
+│   ├── sft.yaml
+│   └── dpo.yaml
+└── experiment/
+    └── sft_llama3_ultrachat.yaml   # overrides for a specific run
+```
+
+Minimal entrypoint:
+
+```python
+import hydra
+from omegaconf import DictConfig
+
+@hydra.main(config_path="configs", config_name="config", version_base="1.3")
+def main(cfg: DictConfig):
+    trainer = build_trainer(cfg)
+    trainer.run()
+
+if __name__ == "__main__":
+    main()
+```
+
+```bash
+# Override from CLI
+uv run python train.py model=llama3 training.lr=1e-5
+
+# Sweep hyperparameters
+uv run python train.py --multirun training.lr=1e-4,1e-5,3e-5
+```
+
+**Use `_target_` for instantiation** to eliminate if/else trees:
+
+```yaml
+# configs/model/gpt2.yaml
+_target_: transformers.AutoModelForCausalLM.from_pretrained
+pretrained_model_name_or_path: gpt2
+torch_dtype: float16
+```
+
+```python
+model = hydra.utils.instantiate(cfg.model)
+```
+
+### Experiment Tracking: Weights & Biases
+
+**Use `wandb` for every run.** Log configs, metrics, system utilization, and artifacts.
+
+```python
+import wandb
+from omegaconf import OmegaConf
+
+def init_wandb(cfg):
+    wandb.init(
+        project=cfg.project_name,
+        config=OmegaConf.to_container(cfg, resolve=True),
+        tags=cfg.get("tags", []),
+    )
+```
+
+**Log everything by default** — it's cheaper to store than to re-run.
+
+**Every run must capture:**
+- **Hyperparameters** — log the full Hydra config as the wandb config (every param is searchable)
+- **Metrics** — loss, accuracy/F1/perplexity via `wandb.log()`, per step/epoch (not just final values)
+- **Artifacts** — model checkpoints, generated outputs via `wandb.Artifact`
+- **Data version** — dataset version/split used, preprocessing applied
+- **Code version** — git commit hash tied to the run
+- **Environment** — Python version, package versions, GPU type, random seeds
+- **System metrics** — GPU utilization, memory usage, training time (wandb logs these automatically)
+- **Tags** — use aggressively (e.g., `["sft", "llama3", "ablation"]`) for filtering
+
+**Practices:**
+- Tag every run with its objective and what changed vs. the previous run
+- Organize experiments by objective, not chronologically
+- Every run must be fully reproducible from its logged metadata alone
+- Compare runs side-by-side using W&B dashboards — don't eyeball logs
+
+### Model and Data Versioning: HuggingFace Hub
+
+**Use `huggingface_hub` for model and dataset versioning.** Git-based repos with version tracking.
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+api.upload_folder(folder_path="./my_model", repo_id="username/my-model")
+api.hf_hub_download("meta-llama/Llama-3-8B", filename="config.json")
+```
+
+For private research, create a private repo on the Hub. Checkpoints and datasets must be versioned and discoverable, not scattered across random cluster directories.
+
+---
+
+## Research Project Structure
+
+```
+my-research-project/
+├── pyproject.toml        # metadata + dependencies (uv manages this)
+├── uv.lock               # deterministic lockfile
+├── configs/              # Hydra YAML configs (checked into git)
+│   ├── config.yaml
+│   ├── model/
+│   ├── dataset/
+│   ├── training/
+│   └── experiment/
+├── src/
+│   └── my_project/
+│       ├── __init__.py
+│       ├── data.py       # dataset loading, preprocessing, collators
+│       ├── model.py      # model construction, custom heads, wrappers
+│       ├── train.py      # training loops or trainer configuration
+│       ├── evaluate.py   # evaluation and metrics
+│       └── utils.py      # shared helpers (seeding, logging, I/O)
+├── scripts/
+│   ├── train.py          # Hydra entrypoint for training
+│   ├── eval.py           # Hydra entrypoint for evaluation
+│   └── run_api_experiment.py
+├── notebooks/            # exploration only — never production code
+├── tests/
+├── slurm/                # cluster job scripts (.sbatch)
+├── outputs/              # Hydra auto-creates this per run
+├── .env.example          # template with placeholder keys (checked into git)
+├── .env                  # actual secrets (gitignored)
+└── README.md
+```
+
+**The rule:** `src/` holds reusable library code. `scripts/` holds entrypoints. `configs/` holds parameters. Everything else is ancillary.
+
+**Setup:**
+- Include a `.env.example` with all required keys as placeholders
+- `.env` must be in `.gitignore` — never commit secrets
+- On project setup, copy `.env.example` to `.env` and prompt the user to fill in their keys
+
+**Entry points:**
+- Single entry-point scripts — `uv run python scripts/train.py` — not scattered one-off scripts
+- All config via Hydra YAML — no hardcoded values, no argparse
+- Bash scripts for orchestration only — launching sweeps, submitting SLURM jobs — not for logic
+
+**What to avoid:**
+- Notebooks as production code — use `.py` files for anything that runs repeatedly
+- Multiple ways to run the same thing — one canonical way per task
+- Hardcoded paths or magic numbers — everything in config or named constants
+- Untracked dependencies or data
+- Copy-pasting between projects — extract to a shared package instead
+
+### Reproducibility
+
+- **Set random seeds explicitly** — write a `seed_everything(seed)` covering `random`, `numpy`, `torch`, `torch.cuda`. Store the seed in Hydra config.
+- **Pin all dependencies** — `uv.lock` committed to git
+- **Version everything** — code (git), data and models (HuggingFace Hub), configs (checked into repo)
+- **Every run is self-contained** — Hydra auto-saves resolved config, logs, and outputs per run
+- **Containerize** (Docker) for cross-machine reproducibility: install `uv`, copy `pyproject.toml` + `uv.lock`, run `uv sync`
+
+### SLURM / Cluster
+
+Keep `.sbatch` scripts in `slurm/`. Job scripts call `uv run python scripts/train.py` with config overrides. Hydra composes cleanly with SLURM.
+
+---
+
+## Reuse Checklist
+
+Before writing any code for a new project:
+
+- [ ] **Can I `uv add` a library that does this?** Check PyPI, HuggingFace, GitHub first.
+- [ ] **Did I already write this in another project?** Extract to shared package.
+- [ ] **Am I copy-pasting a config pattern?** Make it a Hydra config template.
+- [ ] **Am I writing a training loop from scratch?** Use TRL's trainers or HF Trainer.
+- [ ] **Am I writing evaluation code from scratch?** Check if `inspect_evals` already has it.
+- [ ] **Am I parsing CLI arguments?** Stop. Use Hydra.
+- [ ] **Am I writing a custom data loader?** Check if `datasets` supports your format.
+
+---
+
+## ML Libraries Reference
+
+### Training & Fine-Tuning
+
+| Library | Purpose |
+|---|---|
+| `trl` | SFTTrainer, DPOTrainer, GRPOTrainer, PPOTrainer — all post-training methods |
+| `transformers` | Model architectures, tokenizers, base Trainer |
+| `datasets` | Load, process, stream 500K+ datasets from HF Hub |
+| `accelerate` | Multi-GPU, DeepSpeed, FSDP with minimal code changes |
+| `peft` | LoRA, QLoRA — train billion-parameter models on consumer GPUs |
+| `bitsandbytes` | 4-bit/8-bit quantization for training on modest hardware |
+| `unsloth` | 2x faster SFT/DPO training, 70% less VRAM |
+| `vllm` | High-throughput inference, used by TRL for online RL generation |
+| `flash-attn` | Memory-efficient attention |
+| `liger-kernel` | Optimized Triton kernels for transformer training |
+
+### Mechanistic Interpretability
+
+| Library | Purpose |
+|---|---|
+| `transformer_lens` | HookPoints on every activation, 50+ models. Best for circuit discovery, activation patching. |
+| `nnsight` + `nnterp` | Wraps original HF models (exact numerics), 16+ architecture families, remote execution via NDIF |
+| `sae_lens` | Train, load, and analyze sparse autoencoders |
+| `circuitsvis` | Visualize attention patterns and circuits |
+| `pyvene` | Declarative framework for causal interventions |
+
+### Evaluation & API Research
+
+| Library | Purpose |
+|---|---|
+| `inspect-ai` | Composable eval framework, 100+ pre-built benchmarks (UK AISI) |
+| `anthropic` | Official SDK for Claude models |
+| `openai` | Official SDK for GPT models |
+| `litellm` | Single interface to 100+ LLM providers |
+| `instructor` | Structured output extraction from LLM responses |
+
+### Data & Model Management
+
+| Library | Purpose |
+|---|---|
+| `datasets` | Load, process, stream datasets from HF Hub |
+| `huggingface_hub` | Push/pull models and datasets, Git-based versioning |
+
+---
+
+## Recipes by Research Scenario
+
+### Fine-tuning with SFT
+**Stack:** `uv` + `hydra` + `wandb` + `trl` (SFTTrainer) + `datasets` + `peft` + `accelerate`
+
+### RLHF / Preference Optimization
+**Stack:** `uv` + `hydra` + `wandb` + `trl` (GRPOTrainer or DPOTrainer) + `datasets` + `peft` + `vllm`
+
+### Mechanistic Interpretability
+**Stack:** `uv` + `hydra` + `wandb` + `transformer_lens` or `nnsight`/`nnterp` + `sae_lens` + `circuitsvis`
+
+Use TransformerLens for GPT-2 scale (most ergonomic hook interface). Use nnsight/nnterp for exact HF behavior or newer architectures.
+
+### Evaluations on Frontier Models via API
+**Stack:** `uv` + `hydra` + `wandb` + `inspect-ai` + `anthropic`/`openai`/`litellm` + `datasets`
+
+### Building a New Benchmark or Dataset
+**Stack:** `uv` + `datasets` + `huggingface_hub`
+
+Build as `datasets.Dataset`, validate, write a dataset card, push to Hub.
 
 ---
 
@@ -216,7 +510,6 @@ Mock the database layer, use pytest"
 
 **Prefer simplicity**
 - Longer descriptive names over clever abstractions
-- Plain SQL over complex ORMs
 - Explicit over implicit
 - Local logic over hidden configuration
 
@@ -229,14 +522,6 @@ Mock the database layer, use pytest"
 - Avoid libraries with frequent breaking changes
 - Document versions explicitly
 - Keep ecosystem churn low
-
-### Package Management
-
-**Always use `uv` for Python projects** (not pip, not conda)
-- `uv venv` to create virtual environments
-- `uv pip install` to install packages
-- `uv run` to run scripts
-- `uv sync` to sync from lockfile
 
 ---
 
@@ -279,3 +564,9 @@ Mock the database layer, use pytest"
 - [Augment Code - Best Practices for AI Coding Agents](https://www.augmentcode.com/blog/best-practices-for-using-ai-coding-agents)
 - [Devin - Coding Agents 101](https://devin.ai/agents101)
 - [Google Cloud - Five Best Practices for AI Coding Assistants](https://cloud.google.com/blog/topics/developers-practitioners/five-best-practices-for-using-ai-coding-assistants)
+- [Utrecht University - Best Practices for Writing Reproducible Code](https://www.uu.nl/en/research/research-data-management/best-practices-for-writing-reproducible-code)
+- [Emergent Mind - Research as Code](https://www.emergentmind.com/topics/research-as-code)
+- [Neptune.ai - ML Experiment Management](https://neptune.ai/blog/experiment-management)
+- [Towards Data Science - SE Best Practices for Maintainable ML Code](https://towardsdatascience.com/software-engineering-best-practices-for-writing-maintainable-ml-code-717934bd5590/)
+- [arxiv - Best Practices for Scientific Computing](https://ar5iv.labs.arxiv.org/html/1210.0530)
+- [Berkeley Stat243 - Good Practices for Reproducible Research](https://stat243.berkeley.edu/fall-2024/units/unit4-goodPractices.html)
