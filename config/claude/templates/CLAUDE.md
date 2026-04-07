@@ -43,6 +43,18 @@ Claude: "Before I implement caching, I have a few questions:
 
 **It's better to ask a "dumb" question than to make a wrong assumption.**
 
+### NEVER TAKE SHORTCUTS
+
+**If something is not working, ASK THE USER.** Do not:
+- Silently skip a failing step
+- Disable a feature to make the error go away
+- Hardcode values to work around a bug
+- Delete or comment out code that's causing problems
+- Add `try/except: pass` to suppress errors
+- Use `--no-verify`, `--force`, or equivalent flags to bypass checks
+
+**The fix for "it doesn't work" is never "make it stop complaining."** Diagnose the root cause. If you can't, ask.
+
 ### For Experiments
 
 Before running ANY experiment:
@@ -330,6 +342,10 @@ my-research-project/
 │   └── run_api_experiment.py
 ├── notebooks/            # exploration only — never production code
 ├── tests/
+├── docs/
+│   ├── TODO.md           # project todos and next steps
+│   └── meetings/         # meeting notes (one file per meeting)
+├── research_log/         # experiment write-ups and running LOG.md
 ├── slurm/                # cluster job scripts (.sbatch)
 ├── outputs/              # Hydra auto-creates this per run
 ├── .env.example          # template with placeholder keys (checked into git)
@@ -343,11 +359,42 @@ my-research-project/
 - Include a `.env.example` with all required keys as placeholders
 - `.env` must be in `.gitignore` — never commit secrets
 - On project setup, copy `.env.example` to `.env` and prompt the user to fill in their keys
+- **Running experiments must be zero-friction** — entrypoints should automatically load `.env`, set cache directories, and configure the environment so `uv run python scripts/train.py` just works with no manual exports
+
+**Environment bootstrap** — every entrypoint should handle this at the top:
+
+```python
+from dotenv import load_dotenv
+load_dotenv()  # auto-load .env (API keys, tokens)
+
+import os
+
+# Set HF cache to persistent storage (not /root which is ephemeral on RunPod)
+if os.path.exists("/workspace"):
+    os.environ.setdefault("HF_HOME", "/workspace/.cache/huggingface")
+elif os.path.exists("/network/projects"):  # Mila
+    os.environ.setdefault("HF_HOME", os.path.expanduser("~/scratch/.cache/huggingface"))
+```
+
+Put this in `src/my_project/utils.py` as a `setup_env()` function and call it at the top of every script. All environment setup lives in code — **you should never need to manually export variables or prepend env vars to commands.** Running an experiment should always be just:
+
+```bash
+nohup uv run python scripts/train.py &
+```
+
+Never this:
+```bash
+# WRONG — all of this should be handled by setup_env()
+PYTHONPATH=/workspace/pip_packages:/root/projects/my_project \
+HF_HOME=/workspace/cache/huggingface \
+WANDB_MODE=disabled nohup python3 scripts/train.py &
+```
 
 **Entry points:**
 - Single entry-point scripts — `uv run python scripts/train.py` — not scattered one-off scripts
 - All config via Hydra YAML — no hardcoded values, no argparse
 - Bash scripts for orchestration only — launching sweeps, submitting SLURM jobs — not for logic
+- **Always run experiments with `nohup`** so they survive SSH disconnections: `nohup uv run python scripts/train.py &`
 
 **What to avoid:**
 - Notebooks as production code — use `.py` files for anything that runs repeatedly
@@ -367,6 +414,33 @@ my-research-project/
 ### SLURM / Cluster
 
 Keep `.sbatch` scripts in `slurm/`. Job scripts call `uv run python scripts/train.py` with config overrides. Hydra composes cleanly with SLURM.
+
+### Research Log
+
+Keep a `research_log/` directory to document experiment results:
+
+```
+research_log/
+├── LOG.md                          # running log with TLDRs linking to details
+├── 2026-04-03_sft_llama3.md        # detailed write-up per experiment
+├── 2026-04-02_dpo_ablation.md
+└── ...
+```
+
+**`LOG.md`** — a running log, newest entries first. Each entry is a one-liner TLDR linking to the detailed write-up:
+
+```markdown
+# Research Log
+
+- **2026-04-03** — SFT on Llama3 with UltraChat converges in 3 epochs, beats baseline by 4.2% on MT-Bench. [Details](2026-04-03_sft_llama3.md)
+- **2026-04-02** — DPO ablation: beta=0.1 best, beta=0.5 collapses. [Details](2026-04-02_dpo_ablation.md)
+```
+
+**Per-experiment markdown** — one file per experiment containing:
+- **Goal** — what you were testing and why
+- **Setup** — model, dataset, key hyperparameters, git hash
+- **Results** — metrics, plots (embed images or link to W&B)
+- **Interpretation** — what the results mean, what surprised you, what to try next
 
 ---
 
