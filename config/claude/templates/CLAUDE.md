@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code when working with this repository.
 
+> **Note:** This is a master template. When using for a new project, keep only the sections relevant to your project and aim for **under 200 lines** in the final CLAUDE.md. Move detailed reference material (library tables, recipes) into sub-CLAUDE.md files in subdirectories.
+
 ## Core Principles
 
 ### DO NOT MAKE ASSUMPTIONS
@@ -345,9 +347,10 @@ my-research-project/
 ├── docs/
 │   ├── TODO.md           # project todos and next steps
 │   └── meetings/         # meeting notes (one file per meeting)
-├── research_log/         # experiment write-ups and running LOG.md
+├── research_log/         # experiment write-ups (drafts/ for unreviewed, root for approved)
 ├── slurm/                # cluster job scripts (.sbatch)
 ├── outputs/              # Hydra auto-creates this per run
+├── EXPERIMENT_QUEUE.md   # planned experiments for auto-runner
 ├── .env.example          # template with placeholder keys (checked into git)
 ├── .env                  # actual secrets (gitignored)
 └── README.md
@@ -417,17 +420,33 @@ Keep `.sbatch` scripts in `slurm/`. Job scripts call `uv run python scripts/trai
 
 ### Research Log
 
-Keep a `research_log/` directory to document experiment results:
+Keep a `research_log/` directory with two tiers — **drafts** (auto-generated, unreviewed) and **clean** (approved by you):
 
 ```
 research_log/
-├── LOG.md                          # running log with TLDRs linking to details
-├── 2026-04-03_sft_llama3.md        # detailed write-up per experiment
+├── LOG.md                          # clean running log (approved TLDRs)
+├── 2026-04-03_sft_llama3.md        # clean — reviewed and approved
 ├── 2026-04-02_dpo_ablation.md
+├── drafts/
+│   ├── LOG.md                      # dirty running log (auto-generated TLDRs)
+│   ├── 2026-04-07_grpo_sweep.md    # auto-generated, not yet reviewed
+│   └── ...
 └── ...
 ```
 
-**`LOG.md`** — a running log, newest entries first. Each entry is a one-liner TLDR linking to the detailed write-up:
+**Flow:**
+1. Experiment finishes → results auto-written to `drafts/` with an entry in `drafts/LOG.md`
+2. You review the draft → move to root `research_log/`, edit if needed, add TLDR to `LOG.md`
+
+**`drafts/LOG.md`** — scan this to see what's been auto-generated and needs review:
+
+```markdown
+# Research Log (Drafts — Unreviewed)
+
+- **2026-04-07** — GRPO sweep: 3 configs tested, best reward=0.82. [Details](2026-04-07_grpo_sweep.md) ⬜ UNREVIEWED
+```
+
+**`LOG.md`** — the clean, approved log:
 
 ```markdown
 # Research Log
@@ -441,6 +460,42 @@ research_log/
 - **Setup** — model, dataset, key hyperparameters, git hash
 - **Results** — metrics, plots (embed images or link to W&B)
 - **Interpretation** — what the results mean, what surprised you, what to try next
+
+### Experiment Queue and Auto-Runner
+
+Maintain an `EXPERIMENT_QUEUE.md` at the project root:
+
+```markdown
+# Experiment Queue
+
+## Planned (run these first)
+1. SFT Llama3 on UltraChat, lr=1e-5, 3 epochs
+2. Same but lr=3e-5
+3. DPO with beta=0.1 on preference data v2
+
+## Completed
+- ~~SFT Llama3 on UltraChat, lr=1e-4~~ → [results](research_log/drafts/2026-04-07_sft_lr1e4.md)
+```
+
+**Agent roles:**
+
+| Role | Trust level | What it does |
+|---|---|---|
+| **Manager** (you + Claude) | High | Discuss research direction, propose experiments, review results, update clean log |
+| **Worker** (you + Claude) | High | You pick an experiment, Claude helps implement/debug, you launch and monitor |
+| **Auto-runner** (Claude, autonomous) | Low | Runs overnight, all output goes to `drafts/` for review |
+
+**Auto-runner has two modes:**
+
+1. **Queue mode** — picks the next planned experiment from `EXPERIMENT_QUEUE.md` and runs it. No creative decisions. Repeats until queue is empty.
+2. **Autonomous mode** — when queue is empty, reads `research_log/` (both clean and drafts), analyzes what's been tried, proposes a new experiment with rationale, and runs it. Continues until GPU is needed or you stop it.
+
+**All auto-runner output is dirty** — written to `research_log/drafts/` only. You review and approve in the morning.
+
+**Starting the overnight loop should be one command:**
+```bash
+nohup claude --resume auto-runner &
+```
 
 ---
 
@@ -529,6 +584,20 @@ Build as `datasets.Dataset`, validate, write a dataset card, push to Hub.
 
 ## Agentic Coding Best Practices
 
+### The Cardinal Rule: Be Less YOLO
+
+Slow down. Spending 5 minutes on a clear prompt saves hours of debugging bad output. Don't just throw tasks at Claude and hope — be deliberate.
+
+### Research → Plan → Implement (RPI)
+
+Every non-trivial task should follow this workflow:
+
+1. **Research** — understand the codebase, existing patterns, constraints
+2. **Plan** — design the approach, get approval before writing code. Use plan mode.
+3. **Implement** — execute the plan step by step with verification at each phase
+
+Use `/plan` for complex tasks. Make phase-wise gated plans with tests for each phase. Don't skip planning — a good plan avoids most problems downstream.
+
 ### Effective Prompting
 
 **Be specific about approach, not just goal**
@@ -548,37 +617,81 @@ Mock the database layer, use pytest"
 - Reference relevant files and directories
 - Mention key components involved
 - Explain constraints and requirements
-- Share relevant documentation
+- Take screenshots and share with Claude when stuck
 
-**Break tasks into phases**
-```
-1. Plan: Outline the approach, get approval
-2. Implement: Write the code
-3. Test: Verify it works
-4. Review: Check for issues
-```
+**Give Claude a way to verify its work** — tests, type checks, browser testing, domain-specific validation. This alone 2-3x the quality of results.
 
-### Working with Agents
+**Ask Claude to interview you** — use the AskUserQuestion tool to have Claude ask clarifying questions before starting, rather than guessing.
 
-**Plan before implementing**
-- Discuss approach before writing code
-- Outline the solution first
-- Get confirmation on the plan
+### One Task, One Claude
 
-**Use defensive prompting**
-- Anticipate where confusion might arise
-- Preemptively clarify edge cases
-- Think like you're briefing a new team member
-
-**Provide feedback mechanisms**
-- Give access to tests, types, linters
-- Let agents catch their own errors
-- Typed languages improve outcomes
-
-**Cut losses early**
-- If agent keeps going off track, start fresh
-- New session with complete instructions beats iterating through mess
+**Each task should be a single Claude session** to avoid context rot. Long sessions accumulate stale context and Claude starts making worse decisions. When in doubt:
+- Start a fresh session with complete instructions
+- Don't iterate through a mess — restart
 - Expect ~80% automation, not 100%
+
+### Parallel Development with Git Worktrees
+
+**Run multiple Claude sessions in parallel** on the same repo using git worktrees. Each gets its own branch and working directory — complete isolation, no conflicts.
+
+```bash
+# Start Claude in an isolated worktree
+claude --worktree feature-auth
+```
+
+**Rules for parallel work:**
+- Only parallelize tasks that are fully independent (no shared file state)
+- Start with 3-5 parallel sessions — diminishing returns beyond that
+- Each worktree = one task = one Claude session
+- Track all parallel work via GitHub issues/PRs
+
+### Code Review with Fresh Context
+
+**Always review with a separate session.** Claude is biased toward code it just wrote. A fresh context window catches bugs the original agent missed.
+
+- **Writer/Reviewer pattern**: Session A implements, Session B reviews
+- **Cross-model review**: use a different model (e.g., Codex) to review Claude's plan or implementation
+- Review against the original plan and requirements, not just "does it look right"
+
+### Use AI as Your Harshest Critic
+
+**Actively use Claude to challenge your ideas and work:**
+- Ask Claude to argue against your approach and find weaknesses
+- Spawn an adversarial reviewer that tries to disprove your hypothesis
+- Before committing to a research direction, ask "what are the strongest arguments against this?"
+- Don't just ask for validation — ask for destruction
+
+This applies to research ideas, experiment designs, paper arguments, and code architecture.
+
+### Agent Teams (Experimental)
+
+For complex tasks requiring coordination, use Claude Code agent teams:
+- One lead session coordinates, teammates work independently
+- Each teammate has its own context window (avoids context rot)
+- Shared task list with self-coordination
+- Best for: parallel code review, competing hypotheses debugging, cross-layer changes
+- Start with 3-5 teammates, ~5-6 tasks per teammate
+
+### Useful Claude Code Features
+
+| Feature | Purpose |
+|---|---|
+| `/plan` | Enter plan mode — iterate on approach before implementation |
+| `/loop` | Schedule recurring tasks (up to 3 days) — PR babysitting, monitoring |
+| `/btw` | Side-chain conversation while Claude works on main task |
+| `--worktree` | Isolated git worktree for parallel work |
+| `/effort max` | Deeper reasoning for complex debugging and architecture |
+| Slash commands | Create reusable workflows in `.claude/commands/` |
+| Hooks | Auto-format on save, load context on session start |
+| MCP integrations | Connect to Slack, browser console, databases |
+| Skills | Feature-specific capabilities (prefer over generic sub-agents) |
+
+### CLAUDE.md Hygiene
+
+- **Keep under 200 lines per file** — Claude ignores bloated instruction files
+- Add mistakes and anti-patterns as you discover them — compounding improvement
+- Update CLAUDE.md when Claude does something wrong so it doesn't repeat it
+- Use sub-CLAUDE.md files in subdirectories for module-specific guidance
 
 ### Code Structure for Agents
 
@@ -644,3 +757,8 @@ Mock the database layer, use pytest"
 - [Towards Data Science - SE Best Practices for Maintainable ML Code](https://towardsdatascience.com/software-engineering-best-practices-for-writing-maintainable-ml-code-717934bd5590/)
 - [arxiv - Best Practices for Scientific Computing](https://ar5iv.labs.arxiv.org/html/1210.0530)
 - [Berkeley Stat243 - Good Practices for Reproducible Research](https://stat243.berkeley.edu/fall-2024/units/unit4-goodPractices.html)
+- [Boris Cherny - How Boris Uses Claude Code](https://howborisusesclaudecode.com)
+- [claude-code-best-practice (22K+ stars)](https://github.com/shanraisshan/claude-code-best-practice)
+- [Claude Code Docs - Agent Teams](https://code.claude.com/docs/en/agent-teams)
+- [RPI Framework - Research Plan Implement](https://github.com/brilliantconsultingdev/claude-research-plan-implement)
+- [OpenAI - AI-written critiques help humans notice flaws](https://openai.com/index/critiques/)
