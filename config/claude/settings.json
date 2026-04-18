@@ -1,4 +1,7 @@
 {
+  "permissions": {
+    "defaultMode": "auto"
+  },
   "model": "opus[1m]",
   "hooks": {},
   "enabledPlugins": {
@@ -12,6 +15,15 @@
     "claude-code-setup@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
     "double-shot-latte@superpowers-marketplace": true,
-    "code-review@claude-plugins-official": true
-  }
+    "code-review@claude-plugins-official": true,
+    "telegram@claude-plugins-official": true
+  },
+  "effortLevel": "max",
+  "voiceEnabled": false,
+  "voice": {
+    "enabled": false,
+    "mode": "hold"
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "skipAutoPermissionPrompt": true
 }

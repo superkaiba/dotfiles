@@ -34,4 +34,7 @@
     undo = reset --soft HEAD~1
 
 [credential]
-    helper = cache --timeout=3600
+	helper = !gh auth git-credential
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential

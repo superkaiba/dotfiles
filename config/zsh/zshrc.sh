@@ -88,5 +88,34 @@ autoload -Uz compinit && compinit
 # Add local bin to PATH
 export PATH="$HOME/.local/bin:$PATH"
 
+# Claude Code: pin max effort at startup (settings.json env block is applied
+# too late — Claude reads effort from shell env before fully merging it).
+export CLAUDE_CODE_EFFORT_LEVEL=max
+
+# Claude Code with Max (OAuth) auth — bypasses API key, remote control enabled
+alias claude-max='ANTHROPIC_API_KEY="" claude --remote-control'
+
 # Source local overrides if they exist
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+# Auto-wrap `claude` in tmux so the session survives SSH disconnects / laptop close.
+# Each invocation spawns its own session named cc-<pwd>-<N> (N = lowest unused),
+# so multiple concurrent claudes in the same directory coexist. Reattach with
+# `tmux a -t <name>`; list with `claude-ls`.
+# Already inside tmux → skip wrapping (no nested tmux).
+# Bypass the wrapper with `command claude ...` or `\claude ...` if needed.
+claude() {
+    if [[ -n "$TMUX" ]]; then
+        happy claude --model 'opus[1m]' --effort max "$@"
+        return
+    fi
+    local base="cc-${PWD:t}"
+    base="${base//[^A-Za-z0-9_-]/_}"
+    local n=1
+    while tmux has-session -t "${base}-${n}" 2>/dev/null; do
+        ((n++))
+    done
+    tmux new-session -s "${base}-${n}" "happy claude --model 'opus[1m]' --effort max ${(q)@}"
+}
+
+# List running claude tmux sessions.
+claude-ls() { tmux ls 2>/dev/null | grep -E '^cc-' || echo "no running claude sessions"; }

@@ -36,6 +36,12 @@ echo "deploying on machine..."
 # Tmux setup
 echo "source $DOT_DIR/config/tmux.conf" > $HOME/.tmux.conf
 
+# Bash aliases — sourced by ~/.bashrc on Ubuntu-like systems
+# (the standard bashrc has an `if [ -f ~/.bash_aliases ]; then . ~/.bash_aliases; fi` block)
+if [ -f "$DOT_DIR/config/bash/bash_aliases.sh" ]; then
+    echo "source $DOT_DIR/config/bash/bash_aliases.sh" > $HOME/.bash_aliases
+fi
+
 # Vimrc
 if [[ $VIM == "true" ]]; then
     echo "deploying .vimrc"
