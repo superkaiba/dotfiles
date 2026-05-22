@@ -1,0 +1,115 @@
+\bmoreover\b
+\bfurthermore\b
+\badditionally\b
+\bnotably\b
+\bimportantly\b
+\bcrucially\b
+\bsignificantly\b
+\bultimately\b
+\bessentially\b
+\bfundamentally\b
+\bspecifically\b
+\bparticularly\b
+\brobust\b
+\bcomprehensive\b
+\bnuanced\b
+\bintricate\b
+\bpivotal\b
+\bcrucial\b
+\bvital\b
+\bparamount\b
+\bmeticulous\b
+\bseamless\b
+\bdynamic\b
+\bleverage\b
+\bleverages\b
+\bleveraging\b
+\bfoster\b
+\bfosters\b
+\bfostering\b
+\bnavigate\b
+\bnavigates\b
+\bnavigating\b
+\bharness\b
+\bunlock\b
+\bunlocks\b
+\bunleash\b
+\belevate\b
+\bempower\b
+\bempowers\b
+\bamplify\b
+\bembody\b
+\bencompass\b
+\bencapsulate\b
+\billuminate\b
+\benrich\b
+\btranscend\b
+\bcaptivate\b
+\bresonate\b
+\bresonates\b
+\boptimize\b
+\bstreamline\b
+\bfacilitate\b
+\bcultivate\b
+\bcultivates\b
+\bdeepen\b
+\bspearhead\b
+\bevoke\b
+\bevokes\b
+\bthrive\b
+\bthrives\b
+\bexhibit\b
+\bunderscore\b
+\bunderscores\b
+\bunderscoring\b
+\bshowcase\b
+\bshowcases\b
+\bshowcasing\b
+\bgarner\b
+\bgarners\b
+\bglean\b
+\bembark\b
+\bembarks\b
+\bembarked\b
+\brealm\b
+\bjourney\b
+\binterplay\b
+\btestament\b
+\bbeacon\b
+\bcornerstone\b
+\blinchpin\b
+\bhallmark\b
+\bparagon\b
+\bplethora\b
+\bmultitude\b
+\bmyriad\b
+\bmosaic\b
+\bsymphony\b
+\blifeblood\b
+\bepicenter\b
+\bfrontier\b
+\bparadigm\b
+\becosystem\b
+\bsynergy\b
+\bmilestone\b
+\binsights\b
+\btakeaways\b
+\bindeed\b
+\bnevertheless\b
+\bnonetheless\b
+\bwhilst\b
+\bhence\b
+\btherefore\b
+\bthereby\b
+in essence
+in summary
+in conclusion
+to summarize
+to sum up
+to wrap up
+that said
+that being said
+having said that
+as a result
+in light of
+given that
